@@ -1,1 +1,1 @@
-# Dreams-of-Wisdom
+# Dreams of Wisdom
