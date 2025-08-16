@@ -1,0 +1,215 @@
+<html lang="zh-CN">
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>智绘梦AI</title> 
+  <style>
+        body {
+            font-family: '微软雅黑', sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .model-selector {
+            margin-bottom: 20px;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 70%;
+        }
+
+        .user-message {
+            background-color: #0084ff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .ai-message {
+            background-color: #e5e5ea;
+            color: black;
+            margin-right: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0073e6;
+        }
+    </style> 
+  <script src="js/jq.js"></script> 
+ </head> 
+ <body id="v1"> 
+  <div id="v2" class="container"> 
+   <!-- 模型选择器 --> 
+   <div id="v3" class="model-selector"> 
+    <label id="v4" for="modelSelect">选择AI模型：</label> 
+    <select id="modelSelect"> <option id="v5" value="general">智绘梦0.1</option> <option id="v6" value="tech">智绘梦融合版0.1</option> <option id="v7" value="tecj">智绘梦测试版0.2</option> </select> 
+   </div> 
+   <!-- 聊天记录容器 --> 
+   <div class="chat-container" id="chatContainer"> 
+    <p id="v10">智绘梦AI</p> 
+   </div> 
+   <!-- 输入区域 --> 
+   <div id="v8" class="input-area"> 
+    <input type="text" id="userInput" placeholder="输入您的问题..."> 
+    <button id="v9" onclick="sendMessage()">发送</button> 
+   </div> 
+  </div> 
+  <script>
+        // ====================== 核心配置区（可扩展） ======================
+        // 预制回复数据库（模型名称 -> 问题关键词 -> 回复内容）
+        const modelResponses = {
+            general: {  // 智绘梦模型
+                "你好": "你好呀！我是你的智能助手，有什么可以帮您的吗？",
+                "时间": `现在是中国北京时间 ${new Date().toLocaleString()}`,
+                "再见": "再见啦~ 期待下次为您服务！",
+                "1+1":"1+1=2",
+                "默认": "抱歉，我暂时还没学会回答这个问题，您可以尝试问我其他问题哦~"
+            },
+            tech: {  // 智绘梦融合版0.1模型
+                "html是什么": "HTML（超文本标记语言）是用于创建网页的标准标记语言，用于描述网页的结构。",
+                "javascript作用": "JavaScript 是一种脚本语言，主要用于为网页添加交互功能和动态效果。",
+                "css功能": "CSS（层叠样式表）用于控制网页的表现样式，如布局、颜色、字体等。",
+                "默认": "这个问题可能需要更具体的技术背景，您可以尝试描述得更详细一些~"
+            },
+            tecj: {  //智绘梦测试版0.2模型
+                "默认":"该模型正在开发中……"
+            }
+        };
+
+        // 当前选择的模型（初始I化为第一个选项）
+        let currentModel = document.getElementById('modelSelect').value;
+
+        // ====================== 功能函数 ======================
+        // 初始化事件监听
+        function init() {
+            // 模型切换事件
+            document.getElementById('modelSelect').addEventListener('change', (e) => {
+                currentModel = e.target.value;
+                addSystemMessage(`已切换到${getModelName(currentModel)}模型`);
+            });
+
+            // 输入框回车发送
+            document.getElementById('userInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+        }
+
+        // 发送消息主函数
+        function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+
+            if (!message) return; // 空输入处理
+
+            // 添加用户消息到聊天窗口
+            addMessage(message, 'user');
+            
+            // 清空输入框
+            userInput.value = '';
+
+            // 获取AI回复（异步模拟思考过程）
+            setTimeout(() => {
+                const aiReply = getAIResponse(message);
+                addMessage(aiReply, 'ai');
+            }, 500);
+        }
+
+        // 获取AI回复（核心逻辑）
+        function getAIResponse(userMessage) {
+            const model = modelResponses[currentModel];
+            // 简单匹配逻辑：优先精确匹配，其次包含匹配，最后返回默认
+            for (const [keyword, reply] of Object.entries(model)) {
+                if (keyword === '默认') continue;
+                if (userMessage === keyword || userMessage.includes(keyword)) {
+                    return reply;
+                }
+            }
+            return model['默认'];
+        }
+
+        // 添加消息到聊天窗口
+        function addMessage(content, sender) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = content;
+            chatContainer.appendChild(messageDiv);
+            // 自动滚动到最新消息
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 添加系统提示消息
+        function addSystemMessage(content) {
+            const chatContainer = document.getElementById('chatContainer');
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'message system-message';
+            systemDiv.textContent = `📢 系统提示：${content}`;
+            systemDiv.style.textAlign = 'center';
+            systemDiv.style.color = '#666';
+            systemDiv.style.fontSize = '0.9em';
+            chatContainer.appendChild(systemDiv);
+            // 自动滚动到最新消息
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 获取模型显示名称
+        function getModelName(modelKey) {
+            const select = document.getElementById('modelSelect');
+            return select.options[select.selectedIndex].text;
+        }
+
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script> it; it; 
+  <p id="v11">软件版本：Beta1.0</p>
+ </body>
+</html>
